@@ -1,15 +1,27 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAppSelector } from '@/hooks/useAppSelector'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts'
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart'
 
 const mockEntityData = [
   { id: 'e1', entityId: 'PROJ-001', entityName: 'Project Falcon', status: 'Submitted', value: 150000, ownerName: 'Acme Corp', startDate: '2024-06-15', endDate: '2024-07-15' },
   { id: 'e2', entityId: 'PROJ-002', entityName: 'Office Renovation', status: 'Completed', value: 250000, ownerName: 'Globex Inc', startDate: '2024-05-20', endDate: '2024-06-20' },
   { id: 'e3', entityId: 'PROJ-003', entityName: 'Software Licensing', status: 'Draft', value: 80000, ownerName: 'Soylent Corp', startDate: '2024-04-01', endDate: '2024-05-01' },
-  { id: 'e4', entityId: 'PROJ-004', entityName: 'Cloud Migration', status: 'Lost', value: 300000, ownerName: 'Cyberdyne Systems', startDate: '2024-03-01', endDate: '2024-03-30' },
+  { id: 'e4', entityId: 'PROJ-004', entityName: 'Cloud Migration', status: 'Submitted', value: 300000, ownerName: 'Cyberdyne Systems', startDate: '2024-03-01', endDate: '2024-03-30' },
+  {id:'e5',entityId:'PROJ-005',entityName:'AI Research Lab Setup',status:'Submitted',value:450000,ownerName:'Wayne Enterprises',startDate:'2024-07-01',endDate:'2024-08-01'},
+  {id:'e6',entityId:'PROJ-006',entityName:'Data Center Expansion',status:'Completed',value:520000,ownerName:'Stark Industries',startDate:'2024-02-15',endDate:'2024-04-15'},
+  {id:'e7',entityId:'PROJ-007',entityName:'Marketing Automation Tool',status:'Draft',value:120000,ownerName:'Oscorp',startDate:'2024-08-01',endDate:'2024-09-01'},
+  {id:'e8',entityId:'PROJ-008',entityName:'Global HR Integration',status:'Submitted',value:310000,ownerName:'LexCorp',startDate:'2024-06-10',endDate:'2024-07-20'},
+  {id:'e9',entityId:'PROJ-009',entityName:'Fleet Management System',status:'Lost',value:190000,ownerName:'InGen Technologies',startDate:'2024-01-10',endDate:'2024-02-15'},
+  {id:'e10',entityId:'PROJ-010',entityName:'Warehouse Automation',status:'Completed',value:275000,ownerName:'Umbrella Corp',startDate:'2024-03-05',endDate:'2024-04-10'},
+  {id:'e11',entityId:'PROJ-011',entityName:'Digital Learning Platform',status:'Draft',value:95000,ownerName:'Blue Sun Corp',startDate:'2024-08-05',endDate:'2024-09-05'},
+  {id:'e12',entityId:'PROJ-012',entityName:'Customer Analytics Revamp',status:'Submitted',value:160000,ownerName:'Hooli',startDate:'2024-05-01',endDate:'2024-06-01'},
+  {id:'e13',entityId:'PROJ-013',entityName:'Retail POS Upgrade',status:'Completed',value:210000,ownerName:'Tyrell Corporation',startDate:'2024-02-01',endDate:'2024-03-15'},
+  {id:'e14',entityId:'PROJ-014',entityName:'Cybersecurity Overhaul',status:'Lost',value:480000,ownerName:'Black Mesa',startDate:'2024-06-01',endDate:'2024-07-10'}
+
 ]
 
 const chartColors = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--foreground))']
@@ -42,6 +54,13 @@ export function Dashboard() {
     name: schemaName,
     value: schemaCounts[schemaName],
   }))
+
+  const chartConfig = {
+  desktop: {
+    label: "Desktop",
+    color: "var(--chart-3)",
+  },
+} satisfies ChartConfig
 
   return (
     <div className="p-2 md:p-6">
@@ -96,7 +115,7 @@ export function Dashboard() {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Entry Status Distribution</CardTitle>
           </CardHeader>
@@ -120,7 +139,46 @@ export function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
-        </Card>
+        </Card> */}
+
+
+        
+    <Card>
+      <CardHeader>
+        <CardTitle>Entry Status Distribution</CardTitle>
+       
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+        <ChartContainer config={chartConfig} className="h-full w-full">
+          <BarChart accessibilityLayer data={entityStatusData}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="name"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 10)}
+            />
+             {/* <YAxis
+             dataKey={'count'}
+               tickLine={false}
+                tickMargin={10}
+              axisLine={false}
+            /> */}
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <Bar dataKey="count" fill="var(--color-desktop)" radius={8} />
+            <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))' }} />
+          </BarChart>
+        </ChartContainer>
+        </ResponsiveContainer>
+      </CardContent>
+     
+    </Card>
+    
 
         <Card>
           <CardHeader>

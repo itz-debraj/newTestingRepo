@@ -47,7 +47,7 @@
 
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Geist, Geist_Mono } from 'next/font/google'
 import { StoreProvider } from '@/providers/StoreProvider'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { AppSidebar } from '@/components/Layout/AppSidebar'
@@ -57,6 +57,16 @@ import { Toaster } from '@/components/Layout/Toaster'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 const inter = Inter({ subsets: ['latin'] })
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: 'Metadata Management System',
@@ -70,16 +80,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <StoreProvider>
           <ThemeProvider>
-            <SidebarProvider>
+            <SidebarProvider className="h-svh overflow-hidden">
               
                 <AppSidebar />
                 <SidebarInset>
                 <div className="flex flex-col flex-grow h-screen">
                   <Header />
-                  <main className="flex-grow bg-background text-foreground shadow-2xl overflow-y-auto">
+                  <main className="flex-grow overflow-y-auto">
                     <div className="mx-auto h-full">
                       {children}
                     </div>

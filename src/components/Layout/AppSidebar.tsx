@@ -47,9 +47,9 @@ function AppSidebarContent() {
   const { state } = useSidebar()
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center space-x-3 px-2 py-2">
+        <div className="flex items-center space-x-3 py-2">
           <div className="relative flex shrink-0 overflow-hidden rounded-full size-8">
             <span className="flex size-full items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
               P
