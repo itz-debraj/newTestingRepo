@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppSelector} from '@/hooks/useAppSelector'
 import { addSchema, deleteSchema, SchemaField } from '@/store/slices/schemaSlice'
 import { addToast } from '@/store/slices/uiSlice'
-import { Plus, Trash2, Sparkles, Upload, Settings, Calendar, Hash, DollarSign, Percent, List, Layers, Package, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Upload, Settings, Calendar, Hash, DollarSign, Percent, List, Layers, Package, ChevronDown, ChevronRight, Eye, EyeOff, Search } from 'lucide-react'
 import { useAppDispatch } from '@/hooks/useAppDispatch'
 
 export function SchemaConfig() {
@@ -29,6 +29,14 @@ export function SchemaConfig() {
     { name: '', type: 'string', description: '', required: false, defaultValue: '', picklistValues: '' }
   ])
   const [expandedFields, setExpandedFields] = useState<{ [key: number]: boolean }>({ 0: true })
+  const [fieldSearchTerm, setFieldSearchTerm] = useState('')
+  const [allFieldsExpanded, setAllFieldsExpanded] = useState(false)
+
+  const filteredFields = fields.filter(field =>
+    field.name.toLowerCase().includes(fieldSearchTerm.toLowerCase()) ||
+    field.type.toLowerCase().includes(fieldSearchTerm.toLowerCase()) ||
+    field.description.toLowerCase().includes(fieldSearchTerm.toLowerCase())
+  )
 
   const handleAddField = () => {
     const newIndex = fields.length
@@ -65,6 +73,16 @@ export function SchemaConfig() {
     }))
   }
 
+  const toggleAllFields = () => {
+    const newState = !allFieldsExpanded
+    setAllFieldsExpanded(newState)
+    const newExpandedFields: { [key: number]: boolean } = {}
+    fields.forEach((_, index) => {
+      newExpandedFields[index] = newState
+    })
+    setExpandedFields(newExpandedFields)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!schemaName.trim()) {
@@ -91,6 +109,8 @@ export function SchemaConfig() {
     setSchemaDescription('')
     setFields([{ name: '', type: 'string', description: '', required: false, defaultValue: '', picklistValues: '' }])
     setExpandedFields({ 0: true })
+    setFieldSearchTerm('')
+    setAllFieldsExpanded(false)
     setIsCreateModalOpen(false)
   }
 
@@ -287,397 +307,377 @@ export function SchemaConfig() {
       )}
 
       {/* Create Schema Modal */}
-      {/* <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="sm:max-w-6xl max-h-[95vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Create New Schema</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">Create New Schema</DialogTitle>
             <DialogDescription>
               Define a new metadata schema with custom fields and validation rules.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <Label htmlFor="schemaName">Schema Name</Label>
-                <Input
-                  id="schemaName"
-                  value={schemaName}
-                  onChange={(e) => setSchemaName(e.target.value)}
-                  placeholder="e.g., Product Attributes, User Settings"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="schemaDescription">Description</Label>
-                <Input
-                  id="schemaDescription"
-                  value={schemaDescription}
-                  onChange={(e) => setSchemaDescription(e.target.value)}
-                  placeholder="Brief description of this schema"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-semibold">Fields</h4>
-                <div className="flex gap-2">
-                  <Label htmlFor="excel-upload" className="inline-flex items-center px-3 py-2 bg-accent text-accent-foreground rounded-md text-sm font-medium hover:bg-accent/90 transition-colors cursor-pointer">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Excel
-                    <input
-                      type="file"
-                      id="excel-upload"
-                      className="hidden"
-                      accept=".xlsx,.xls"
-                      onChange={handleExcelUpload}
-                    />
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      dispatch(addToast({ message: 'AI schema suggestion is a mock feature', type: 'info' }))
-                    }}
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    AI Suggestion
-                  </Button>
-                </div>
-              </div>
-              
-              <ScrollArea className="flex-1 pr-4">
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <Collapsible
-                      key={index}
-                      open={expandedFields[index]}
-                      onOpenChange={() => toggleFieldExpanded(index)}
-                    >
-                      <Card className="border-2 border-dashed border-border hover:border-primary/50 transition-colors">
-                        <CollapsibleTrigger asChild>
-                          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors pb-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                {expandedFields[index] ? (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                {getFieldTypeIcon(field.type)}
-                                <div>
-                                  <h4 className="font-medium">
-                                    {field.name || `Field ${index + 1}`}
-                                    {field.required && <span className="text-destructive ml-1">*</span>}
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground capitalize">
-                                    {field.type} {field.description && `• ${field.description}`}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    dispatch(addToast({ message: 'AI field enhancement is a mock feature', type: 'info' }))
-                                  }}
-                                >
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  AI Enhance
-                                </Button>
-                                
-                                {fields.length > 1 && (
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleRemoveField(index)
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </CardHeader>
-                        </CollapsibleTrigger>
-                        
-                        <CollapsibleContent>
-                          <CardContent className="pt-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              <div>
-                                <Label htmlFor={`fieldName-${index}`}>Field Name</Label>
-                                <Input
-                                  id={`fieldName-${index}`}
-                                  value={field.name}
-                                  onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
-                                  placeholder="e.g., itemCode, isActive"
-                                  required
-                                />
-                              </div>
-                              
-                              <div>
-                                <Label htmlFor={`fieldType-${index}`}>Type</Label>
-                                <Select
-                                  value={field.type}
-                                  onValueChange={(value) => handleFieldChange(index, 'type', value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="string">String</SelectItem>
-                                    <SelectItem value="number">Number</SelectItem>
-                                    <SelectItem value="boolean">Boolean</SelectItem>
-                                    <SelectItem value="date">Date</SelectItem>
-                                    <SelectItem value="currency">Currency</SelectItem>
-                                    <SelectItem value="percentage">Percentage</SelectItem>
-                                    <SelectItem value="picklist">Picklist</SelectItem>
-                                    <SelectItem value="array">Array</SelectItem>
-                                    <SelectItem value="object">Object</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              
-                              <div>
-                                <Label htmlFor={`defaultValue-${index}`}>Default Value</Label>
-                                <Input
-                                  id={`defaultValue-${index}`}
-                                  value={field.defaultValue}
-                                  onChange={(e) => handleFieldChange(index, 'defaultValue', e.target.value)}
-                                  placeholder="e.g., N/A, 0"
-                                />
-                              </div>
-                              
-                              <div className="md:col-span-2">
-                                <Label htmlFor={`fieldDescription-${index}`}>Description</Label>
-                                <Input
-                                  id={`fieldDescription-${index}`}
-                                  value={field.description}
-                                  onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
-                                  placeholder="e.g., Unique identifier for the item"
-                                />
-                              </div>
-                              
-                              <div className="flex items-center space-x-4">
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={`fieldRequired-${index}`}
-                                    checked={field.required}
-                                    onCheckedChange={(checked) => handleFieldChange(index, 'required', checked)}
-                                  />
-                                  <Label htmlFor={`fieldRequired-${index}`}>Required</Label>
-                                </div>
-                              </div>
-                              
-                              {field.type === 'picklist' && (
-                                <div className="md:col-span-3">
-                                  <Label htmlFor={`picklistValues-${index}`}>Picklist Values (comma-separated)</Label>
-                                  <Textarea
-                                    id={`picklistValues-${index}`}
-                                    value={field.picklistValues || ''}
-                                    onChange={(e) => handleFieldChange(index, 'picklistValues', e.target.value)}
-                                    rows={2}
-                                    placeholder="e.g., Active,Inactive,Pending"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </CollapsibleContent>
-                      </Card>
-                    </Collapsible>
-                  ))}
-                </div>
-              </ScrollArea>
-              
-              <div className="mt-4 pt-4 border-t">
-                <Button
-                  type="button"
-                  onClick={handleAddField}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Field
-                </Button>
-              </div>
-            </div>
-
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                Create Schema
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog> */}
-
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Create New Schema</DialogTitle>
-            <DialogDescription>
-              Define a new metadata schema with custom fields and validation rules.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="flex flex-1 gap-6 overflow-hidden">
-            {/* Left column - Form */}
-            <div className="flex-[2] flex flex-col overflow-hidden">
-              <ScrollArea className="flex-1 pr-4">
-                {/* Schema Basics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Schema Basic Info Section */}
+            <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
                   <div>
-                    <Label htmlFor="schemaName">Schema Name</Label>
+                    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Schema Information</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Basic details about your schema</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="schemaName" className="text-sm font-medium">Schema Name *</Label>
                     <Input
                       id="schemaName"
                       value={schemaName}
                       onChange={(e) => setSchemaName(e.target.value)}
                       placeholder="e.g., Product Attributes, User Settings"
                       required
+                      className="h-11"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="schemaDescription">Description</Label>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="schemaDescription" className="text-sm font-medium">Description</Label>
                     <Input
                       id="schemaDescription"
                       value={schemaDescription}
                       onChange={(e) => setSchemaDescription(e.target.value)}
                       placeholder="Brief description of this schema"
+                      className="h-11"
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Fields Section */}
-                <div className="flex justify-between items-center mb-4">
-                  <Label htmlFor="excel-upload" className="cursor-pointer flex items-center px-3 py-2 bg-accent rounded-md">
-                    <Upload className="h-4 w-4 mr-2" /> Upload Excel
-                    <input type="file" id="excel-upload" className="hidden" accept=".xlsx,.xls" onChange={handleExcelUpload} />
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => dispatch(addToast({ message: 'AI schema suggestion is a mock feature', type: 'info' }))}
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" /> AI Suggestion
-                  </Button>
-                </div>
-
-                {/* Fields list */}
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <Collapsible
-                      key={index}
-                      open={expandedFields[index]}
-                      onOpenChange={() => toggleFieldExpanded(index)}
-                    >
-                      <Card className="border-2 border-dashed hover:border-primary/50 transition-colors">
-                        <CollapsibleTrigger asChild>
-                          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors pb-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {expandedFields[index] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                {getFieldTypeIcon(field.type)}
-                                <span className="font-medium">{field.name || `Field ${index + 1}`}</span>
-                              </div>
-                              {fields.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveField(index); }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </CardHeader>
-                        </CollapsibleTrigger>
-
-                        <CollapsibleContent>
-                          <CardContent className="pt-0 space-y-4">
-                            <div>
-                              <Label>Field Name</Label>
-                              <Input value={field.name} onChange={(e) => handleFieldChange(index, 'name', e.target.value)} />
-                            </div>
-                            <div>
-                              <Label>Type</Label>
-                              <Select value={field.type} onValueChange={(value) => handleFieldChange(index, 'type', value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {['string', 'number', 'boolean', 'date', 'currency', 'percentage', 'picklist', 'array', 'object'].map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                      <div className="flex items-center gap-2">
-                                        {getFieldTypeIcon(type)}
-                                        <span className="capitalize">{type}</span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            {field.type === 'picklist' && (
-                              <div>
-                                <Label>Picklist Values</Label>
-                                <Textarea
-                                  value={field.picklistValues || ''}
-                                  onChange={(e) => handleFieldChange(index, 'picklistValues', e.target.value)}
-                                  placeholder="Comma-separated values"
-                                />
-                              </div>
-                            )}
-                          </CardContent>
-                        </CollapsibleContent>
-                      </Card>
-                    </Collapsible>
-                  ))}
-                </div>
-
-                <Button type="button" variant="outline" onClick={handleAddField} className="mt-4 w-full">
-                  <Plus className="h-4 w-4 mr-2" /> Add Field
-                </Button>
-              </ScrollArea>
-            </div>
-
-            {/* Right column - Live Preview */}
-            <div className="flex-[1] bg-muted rounded-lg p-4 overflow-y-auto">
-              <h4 className="font-semibold mb-3">Live Preview</h4>
-              <Card>
-                <CardContent className="space-y-3 pt-4">
-                  {fields.map((f, i) => (
-                    <div key={i}>
-                      <Label className="flex items-center gap-2">
-                        {getFieldTypeIcon(f.type)}
-                        {f.name || `Field ${i + 1}`}
-                      </Label>
-                      <Input placeholder={f.defaultValue || ''} disabled />
+            {/* Fields Section */}
+            <Card className="flex-1 min-h-0 flex flex-col pt-0">
+              <CardHeader className="rounded-tl-xl rounded-tr-xl p-6 border-b bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                      <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">Schema Fields</h3>
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        {fields.length} field{fields.length !== 1 ? 's' : ''} • {fields.filter(f => f.required).length} required
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search fields..."
+                        value={fieldSearchTerm}
+                        onChange={(e) => setFieldSearchTerm(e.target.value)}
+                        className="pl-10 w-64 h-9"
+                      />
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleAllFields}
+                      title={allFieldsExpanded ? "Collapse All" : "Expand All"}
+                      className="h-9"
+                    >
+                      {allFieldsExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={handleAddField}
+                      variant="outline"
+                      // className="w-full h-12 border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Add New Field
+                    </Button>
+                    
+                    <Label htmlFor="excel-upload" className="inline-flex items-center px-3 py-2 bg-accent text-accent-foreground rounded-md text-sm font-medium hover:bg-accent/90 transition-colors cursor-pointer h-9">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import Excel
+                      <input
+                        type="file"
+                        id="excel-upload"
+                        className="hidden"
+                        accept=".xlsx,.xls"
+                        onChange={handleExcelUpload}
+                      />
+                    </Label>
+                    
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        dispatch(addToast({ message: 'AI schema suggestion is a mock feature', type: 'info' }))
+                      }}
+                      className="h-9"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      AI Suggest
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="flex-1 min-h-0 p-0">
+                <div className="flex flex-col h-full">
+                  <ScrollArea className="h-[25vh] p-6 py-0">
+                    <div className="space-y-4">
+                      {filteredFields.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                          <p className="text-muted-foreground">
+                            {fieldSearchTerm ? 'No fields match your search' : 'No fields added yet'}
+                          </p>
+                        </div>
+                      ) : (
+                        filteredFields.map((field, index) => {
+                          const originalIndex = fields.findIndex(f => f === field)
+                          return (
+                            <Collapsible
+                              key={originalIndex}
+                              open={expandedFields[originalIndex]}
+                              onOpenChange={() => toggleFieldExpanded(originalIndex)}
+                            >
+                              <Card className="border-2 border-dashed border-border hover:border-primary/50 transition-all duration-200 hover:shadow-md">
+                                <CollapsibleTrigger asChild>
+                                  <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors pb-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center space-x-3">
+                                        {expandedFields[originalIndex] ? (
+                                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                        ) : (
+                                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                        <div className="p-2 bg-primary/10 rounded-lg">
+                                          {getFieldTypeIcon(field.type)}
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="flex items-center space-x-2">
+                                            <h4 className="font-semibold text-base">
+                                              {field.name || `Field ${originalIndex + 1}`}
+                                            </h4>
+                                            {field.required && (
+                                              <Badge variant="destructive" className="text-xs px-2 py-0">Required</Badge>
+                                            )}
+                                            <Badge variant="secondary" className="text-xs px-2 py-0 capitalize">
+                                              {field.type}
+                                            </Badge>
+                                          </div>
+                                          <p className="text-sm text-muted-foreground mt-1">
+                                            {field.description || 'No description provided'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            dispatch(addToast({ message: 'AI field enhancement is a mock feature', type: 'info' }))
+                                          }}
+                                          className="h-8"
+                                        >
+                                          <Sparkles className="h-4 w-4" />
+                                        </Button>
+                                        
+                                        {fields.length > 1 && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleRemoveField(originalIndex)
+                                            }}
+                                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </CardHeader>
+                                </CollapsibleTrigger>
+                                
+                                <CollapsibleContent>
+                                  <CardContent className="pt-0 pb-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                      <div className="space-y-2">
+                                        <Label htmlFor={`fieldName-${originalIndex}`} className="text-sm font-medium">Field Name *</Label>
+                                        <Input
+                                          id={`fieldName-${originalIndex}`}
+                                          value={field.name}
+                                          onChange={(e) => handleFieldChange(originalIndex, 'name', e.target.value)}
+                                          placeholder="e.g., itemCode, isActive"
+                                          required
+                                          className="h-10"
+                                        />
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label htmlFor={`fieldType-${originalIndex}`} className="text-sm font-medium">Type</Label>
+                                        <Select
+                                          value={field.type}
+                                          onValueChange={(value) => handleFieldChange(originalIndex, 'type', value)}
+                                        >
+                                          <SelectTrigger className="h-10">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="string">
+                                              <div className="flex items-center space-x-2">
+                                                <Package className="h-4 w-4" />
+                                                <span>String</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="number">
+                                              <div className="flex items-center space-x-2">
+                                                <Hash className="h-4 w-4" />
+                                                <span>Number</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="boolean">
+                                              <div className="flex items-center space-x-2">
+                                                <Settings className="h-4 w-4" />
+                                                <span>Boolean</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="date">
+                                              <div className="flex items-center space-x-2">
+                                                <Calendar className="h-4 w-4" />
+                                                <span>Date</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="currency">
+                                              <div className="flex items-center space-x-2">
+                                                <DollarSign className="h-4 w-4" />
+                                                <span>Currency</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="percentage">
+                                              <div className="flex items-center space-x-2">
+                                                <Percent className="h-4 w-4" />
+                                                <span>Percentage</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="picklist">
+                                              <div className="flex items-center space-x-2">
+                                                <List className="h-4 w-4" />
+                                                <span>Picklist</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="array">
+                                              <div className="flex items-center space-x-2">
+                                                <Layers className="h-4 w-4" />
+                                                <span>Array</span>
+                                              </div>
+                                            </SelectItem>
+                                            <SelectItem value="object">
+                                              <div className="flex items-center space-x-2">
+                                                <Package className="h-4 w-4" />
+                                                <span>Object</span>
+                                              </div>
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label htmlFor={`defaultValue-${originalIndex}`} className="text-sm font-medium">Default Value</Label>
+                                        <Input
+                                          id={`defaultValue-${originalIndex}`}
+                                          value={field.defaultValue}
+                                          onChange={(e) => handleFieldChange(originalIndex, 'defaultValue', e.target.value)}
+                                          placeholder="e.g., N/A, 0"
+                                          className="h-10"
+                                        />
+                                      </div>
+                                      
+                                      <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor={`fieldDescription-${originalIndex}`} className="text-sm font-medium">Description</Label>
+                                        <Input
+                                          id={`fieldDescription-${originalIndex}`}
+                                          value={field.description}
+                                          onChange={(e) => handleFieldChange(originalIndex, 'description', e.target.value)}
+                                          placeholder="e.g., Unique identifier for the item"
+                                          className="h-10"
+                                        />
+                                      </div>
+                                      
+                                      <div className="flex items-center space-x-4">
+                                        <div className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`fieldRequired-${originalIndex}`}
+                                            checked={field.required}
+                                            onCheckedChange={(checked) => handleFieldChange(originalIndex, 'required', checked)}
+                                          />
+                                          <Label htmlFor={`fieldRequired-${originalIndex}`} className="text-sm font-medium">Required Field</Label>
+                                        </div>
+                                      </div>
+                                      
+                                      {field.type === 'picklist' && (
+                                        <div className="space-y-2 md:col-span-3">
+                                          <Label htmlFor={`picklistValues-${originalIndex}`} className="text-sm font-medium">Picklist Values</Label>
+                                          <Textarea
+                                            id={`picklistValues-${originalIndex}`}
+                                            value={field.picklistValues || ''}
+                                            onChange={(e) => handleFieldChange(originalIndex, 'picklistValues', e.target.value)}
+                                            rows={3}
+                                            placeholder="Enter comma-separated values: Active, Inactive, Pending"
+                                            className="resize-none"
+                                          />
+                                          <p className="text-xs text-muted-foreground">
+                                            Separate multiple values with commas
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </CollapsibleContent>
+                              </Card>
+                            </Collapsible>
+                          )
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CardContent>
+
+              
+            </Card>
+
+            <DialogFooter className="mt-6 pt-4 border-t bg-muted/30">
+              <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-w-[120px]">
+                Create Schema
+              </Button>
+            </DialogFooter>
           </form>
-
-          <DialogFooter className="sticky bottom-0 bg-background border-t py-3 mt-3">
-            <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-            <Button type="submit">Create Schema</Button>
-          </DialogFooter>
         </DialogContent>
-
       </Dialog>
+
+      
 
     </div>
   )

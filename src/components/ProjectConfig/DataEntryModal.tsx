@@ -100,7 +100,7 @@ export function DataEntryModal({
                     <SelectValue placeholder="-- Select --" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-- Select --</SelectItem>
+                    {/* <SelectItem value="">-- Select --</SelectItem> */}
                     {field.picklistValues?.split(',').map(val => (
                       <SelectItem key={val.trim()} value={val.trim()}>
                         {val.trim()}
