@@ -1,15 +1,205 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for metadata-management production database
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// Users table - Authentication and user management
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String?
+  role          UserRole @default(USER)
+  avatarUrl     String?  @map("avatar_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  // Relations
+  organizations     UserOrganization[]
+  schemasCreated    Schema[]           @relation("SchemaCreator")
+  projectsCreated   Project[]          @relation("ProjectCreator")
+  dataRowsCreated   DataRow[]          @relation("DataRowCreator")
+  dataRowsUpdated   DataRow[]          @relation("DataRowUpdater")
+  projectSchemasAdded ProjectSchema[]  @relation("ProjectSchemaAdder")
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  VIEWER
+}
+
+// Organizations table - Multi-tenancy support
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  settings  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members       UserOrganization[]
+  schemas       Schema[]
+  projects      Project[]
+  auditLogs     AuditLog[]
+
+  @@map("organizations")
+}
+
+// User_Organizations junction table - Many-to-many with role
+model UserOrganization {
+  id             String         @id @default(uuid())
+  userId         String         @map("user_id")
+  organizationId String         @map("organization_id")
+  role           OrganizationRole
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("user_organizations")
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// Schemas table - Metadata schema definitions
+model Schema {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  schemaName     String       @map("schema_name")
+  description    String?
+  fields         Json         // Array of field definitions
+  status         SchemaStatus @default(DRAFT)
+  version        Int          @default(1)
+  createdBy      String       @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator        User            @relation("SchemaCreator", fields: [createdBy], references: [id])
+  projectSchemas ProjectSchema[]
+  dataRows       DataRow[]
+
+  @@index([organizationId, status])
+  @@map("schemas")
+}
+
+enum SchemaStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// Projects table - Project management
+model Project {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  description    String?
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator        User            @relation("ProjectCreator", fields: [createdBy], references: [id])
+  projectSchemas ProjectSchema[]
+  dataRows       DataRow[]
+
+  @@index([organizationId])
+  @@map("projects")
+}
+
+// Project_Schemas junction table - Many-to-many
+model ProjectSchema {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  schemaId  String   @map("schema_id")
+  addedBy   String   @map("added_by")
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  schema  Schema  @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+  adder   User    @relation("ProjectSchemaAdder", fields: [addedBy], references: [id])
+
+  @@unique([projectId, schemaId])
+  @@index([projectId])
+  @@index([schemaId])
+  @@map("project_schemas")
+}
+
+// Data_Rows table - Actual data entries
+model DataRow {
+  id        String         @id @default(uuid())
+  projectId String         @map("project_id")
+  schemaId  String         @map("schema_id")
+  data      Json           // Dynamic field values stored as JSON
+  status    DataRowStatus  @default(DRAFT)
+  createdBy String         @map("created_by")
+  updatedBy String         @map("updated_by")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  schema  Schema  @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+  creator User    @relation("DataRowCreator", fields: [createdBy], references: [id])
+  updater User    @relation("DataRowUpdater", fields: [updatedBy], references: [id])
+
+  @@index([projectId, schemaId])
+  @@index([projectId])
+  @@map("data_rows")
+}
+
+enum DataRowStatus {
+  DRAFT
+  SUBMITTED
+  COMPLETED
+  LOST
+}
+
+// Audit_Logs table - Audit trail for compliance
+model AuditLog {
+  id             String    @id @default(uuid())
+  userId         String?   @map("user_id")
+  organizationId String?   @map("organization_id")
+  action         String
+  resourceType   String    @map("resource_type")
+  resourceId     String?   @map("resource_id")
+  changes        Json?     // Before/after values
+  ipAddress      String?   @map("ip_address")
+  userAgent      String?   @map("user_agent")
+  timestamp      DateTime  @default(now())
+
+  // Relations
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([resourceType, resourceId])
+  @@index([timestamp])
+  @@map("audit_logs")
 }
